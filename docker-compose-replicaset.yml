@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+
+  mongodb1:
+    restart: always
+    image: mongo:4.4
+    container_name: mongodb1
+    expose:
+      - 27017
+    ports:
+      - "27017:27017"
+    command: ['--bind_ip_all' , '--replSet' , 'rs0']
+    volumes:
+      - data:/data/db
+      - config:/data/configdb   
+    networks:
+      - mongo-network
+
+
+  mongodb2:
+    restart: always
+    image: mongo:4.4
+    depends_on: 
+      - mongodb1
+    expose:
+      - 27017
+    ports:
+      - "27018:27017"
+    container_name: mongodb2
+    command: ['--bind_ip_all' , '--replSet' , 'rs0']
+    networks:
+      - mongo-network
+      
+  mongodb3:
+    restart: always
+    image: mongo:4.4
+    depends_on: 
+      - mongodb2
+    expose:
+      - 27017
+    ports:
+      - "27019:27017"
+    container_name: mongodb3
+    command: ['--bind_ip_all' , '--replSet' , 'rs0']
+    networks:
+      - mongo-network
+  
+  mongoclient:
+    image: mongo
+    restart: always
+    container_name: mongoclient
+    depends_on:
+      - mongodb1
+      - mongodb2
+      - mongodb3
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: ["bash","./scripts/init_replica.sh"]
+    networks:
+      - mongo-network
+
+volumes:
+  data:
+  config:
+
+networks:
+  mongo-network:
+    driver: bridge
