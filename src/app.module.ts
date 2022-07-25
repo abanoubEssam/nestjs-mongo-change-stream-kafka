@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     }),
     UsersModule,
     StatisticsModule,
+    KafkaModule,
   ],
   controllers: [],
   providers: [],
