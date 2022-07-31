@@ -7,9 +7,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/users.schema';
 import { ChangeStreamDocument, ChangeStream } from 'mongodb';
+import { KafkaProducerService } from 'src/kafka/kafka.producer.service';
 @Injectable()
 export class UsersService implements OnApplicationBootstrap, OnModuleDestroy {
-  constructor(@InjectModel(User.name) private _model: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private _model: Model<UserDocument>,
+    private readonly kafkaProducerService: KafkaProducerService,
+  ) {}
 
   private changeStream: ChangeStream;
   // private listeners:
@@ -34,16 +38,8 @@ export class UsersService implements OnApplicationBootstrap, OnModuleDestroy {
     console.log('Listener Working');
     this.changeStream.on(
       'change',
-      (listener: ChangeStreamDocument<Document>) => {
+      async (listener: ChangeStreamDocument<Document>) => {
         if (listener.operationType == 'insert') {
-          console.log(
-            'operationType',
-            listener.operationType,
-            'ResumeToken',
-            listener._id['_data'],
-            'FullDoc',
-            listener.fullDocument,
-          );
           const size = Buffer.byteLength(JSON.stringify(listener.fullDocument));
           console.log(
             '🚀 ~ file: users.service.ts ~ line 48 ~ UsersService ~ onApplicationBootstrap ~ size',
@@ -60,6 +56,15 @@ export class UsersService implements OnApplicationBootstrap, OnModuleDestroy {
             '🚀 ~ file: users.service.ts ~ line 55 ~ UsersService ~ onApplicationBootstrap ~ megaBytes',
             megaBytes,
           );
+          // send to kafka
+          await this.kafkaProducerService.produce({
+            topic: 'create-user',
+            messages: [
+              {
+                value: JSON.stringify(listener.fullDocument),
+              },
+            ],
+          });
         }
         if (listener.operationType == 'delete') {
           console.log('listener', listener);
